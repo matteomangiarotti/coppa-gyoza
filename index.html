@@ -592,7 +592,7 @@ function refreshEditor(){ view.force=true; const y=window.scrollY; render(); win
 
 
 /* ---------- sorpassi: animation for everyone, sound on the overtaker's phone ---------- */
-const FX_MIN=10;
+const FX_MIN=10, FX_MS=12000;
 let prevCounts=null, fxQueue=[], fxBusy=false, AC=null, MASTER=null;
 function unlockAudio(){
   try{
@@ -649,6 +649,10 @@ function playClip(){
     if(!CLIP.src.endsWith(src)){ CLIP.src=src; }
     CLIP.currentTime=0; CLIP.volume=1;
     const p=CLIP.play(); p&&p.catch(e=>console.warn('clip play',e));
+    clearTimeout(playClip.t); clearInterval(playClip.f);
+    playClip.t=setTimeout(()=>{ // fade out over 0.6s, then stop at 12s
+      playClip.f=setInterval(()=>{ CLIP.volume=Math.max(0,CLIP.volume-0.1); if(CLIP.volume<=0.01){ clearInterval(playClip.f); CLIP.pause(); CLIP.volume=1; } },60);
+    }, FX_MS-600);
     return true;
   }catch(e){ console.warn(e); return false; }
 }
@@ -731,7 +735,7 @@ function runFx(){
       setTimeout(()=>speak(th.voice(A.name,bNames)), 900);
     }
   }
-  clearTimeout(runFx.t); runFx.t=setTimeout(closeFx, ev.a===me?8000:5000);
+  clearTimeout(runFx.t); runFx.t=setTimeout(closeFx, FX_MS);
 }
 function closeFx(){ const fxEl=document.getElementById('fx'); fxEl.hidden=true; fxEl.innerHTML=''; fxBusy=false; setTimeout(runFx,300); }
 
