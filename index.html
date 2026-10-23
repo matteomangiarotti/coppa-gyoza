@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1c130f">
-<title>Coppa Gyoza</title>
+<title>Gyoza Grand Prix</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
 <style>
@@ -216,6 +216,49 @@ h2{font-size:1.25rem}
 .fx-arrow{font-family:var(--display);font-size:2.4rem;color:var(--scallion)}
 .fx-t{margin:0;font-size:1.1rem}
 .fx-s{margin:0;color:var(--muted)}
+
+.invite-top{min-height:38px;padding:6px 14px;font-size:.85rem}
+.head-r{display:flex;align-items:center;gap:8px}
+.btn.tiny{min-height:32px;padding:4px 10px;font-size:.78rem;border-color:var(--crust-deep);color:var(--crust)}
+.board-head h2{font-size:1.05rem}
+/* race */
+.race{display:flex;flex-direction:column;gap:4px;width:100%;background:none;border:0;padding:0;text-align:left;color:inherit}
+.lane{display:grid;grid-template-columns:20px minmax(0,1fr) 34px;align-items:center;gap:6px}
+.lane .pos{font-family:var(--display);color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
+.lane.p1 .pos{color:var(--crust)} .lane.p2 .pos{color:#d9d4cf} .lane.p3 .pos{color:#d58b52}
+.lane .n{font-family:var(--display);font-size:1.15rem;text-align:right;font-variant-numeric:tabular-nums}
+.track{position:relative;height:40px;border-radius:10px;background:repeating-linear-gradient(90deg,transparent 0 18px,rgba(247,236,223,.06) 18px 20px),#231710;border:1px solid var(--line);overflow:hidden}
+.lane.you .track{border-color:var(--scallion)}
+.finish{position:absolute;right:0;top:0;bottom:0;width:8px;background:repeating-conic-gradient(#f7ecdf 0 25%,#1c130f 0 50%) 0 0/8px 8px;opacity:.55}
+.runner{position:absolute;bottom:1px;width:40px;transition:left .8s cubic-bezier(.3,1.3,.5,1);display:flex;align-items:flex-end}
+.runner svg{width:40px;height:auto;flex:none}
+.runner .rn{position:absolute;left:44px;bottom:12px;white-space:nowrap;font-size:.74rem;font-weight:700;color:var(--rice);text-shadow:0 1px 2px #000}
+.runner.lbl-left .rn{left:auto;right:44px}
+.race-hint{display:block;text-align:center;font-size:.78rem;color:var(--muted);font-weight:700;padding:6px 0 0}
+.full-list{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.full-list li{grid-template-columns:24px 32px minmax(0,1fr) auto auto}
+.full-list li .av{width:32px}
+.full-list li.p1{background:linear-gradient(90deg,rgba(242,169,59,.25),transparent)}
+.full-list .gapn{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+/* running animation */
+svg.running .body{animation:bob .32s ease-in-out infinite alternate}
+svg.running .leg{transform-box:fill-box;transform-origin:50% 0}
+svg.running .leg.l{animation:stride .32s ease-in-out infinite alternate}
+svg.running .leg.r{animation:stride .32s ease-in-out infinite alternate-reverse}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-4px)}}
+@keyframes stride{from{transform:rotate(28deg)}to{transform:rotate(-28deg)}}
+.prop{transform-box:fill-box;transform-origin:50% 50%;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* overtake scene */
+.fx-track{position:relative;width:100%;height:96px;border-radius:14px;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(247,236,223,.06) 22px 24px),#231710;border:1px solid var(--line);overflow:hidden}
+.fx-line{position:absolute;left:0;right:0;top:50%;border-top:2px dashed rgba(247,236,223,.18)}
+.fx-run{position:absolute;width:64px;display:flex;flex-direction:column;align-items:center}
+.fx-run svg{width:64px;height:auto}
+.fx-run span{font-size:.7rem;font-weight:700;white-space:nowrap}
+.fx-b{top:4px;left:42%;animation:runB 2.6s ease-out forwards}
+.fx-a{top:34px;left:6%;animation:runA 2.6s cubic-bezier(.4,0,.2,1) forwards;z-index:2}
+@keyframes runB{to{left:48%}}
+@keyframes runA{0%{left:4%}60%{left:46%}100%{left:72%}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .hud{display:grid;gap:12px;grid-template-columns:1fr}
 .hud .board{order:-1}
@@ -255,8 +298,9 @@ h2{font-size:1.25rem}
   <header class="top">
     <button class="brand" id="brand" aria-label="Torna al tavolo">
       <span id="brandIcon"></span>
-      <span><b>Coppa Gyoza</b><small>Chi ne mangia di più?</small></span>
+      <span><b>Gyoza Grand Prix</b><small>Chi ne mangia di più?</small></span>
     </button>
+    <button class="btn invite-top" data-act="invite">Invita amici</button>
   </header>
   <main id="app"></main>
 </div>
@@ -273,15 +317,27 @@ const DOUGH = [
   {k:'barbabietola',n:'Barbabietola',c:'#f1a6bf',s:'#d27e9b'},
   {k:'carota',n:'Carota',c:'#f6b56a',s:'#d98f42'},
   {k:'curcuma',n:'Curcuma',c:'#f4d45c',s:'#d4b236'},
-  {k:'seppia',n:'Nero di seppia',c:'#45434b',s:'#2c2b31'}
+  {k:'seppia',n:'Nero di seppia',c:'#45434b',s:'#2c2b31'},
+  {k:'cavolo',n:'Cavolo viola',c:'#b59ae0',s:'#8f72c4'},
+  {k:'gambero',n:'Gambero',c:'#ffa38f',s:'#e57d66'},
+  {k:'cielo',n:'Fiore blu',c:'#93c6f0',s:'#6a9fd0'},
+  {k:'peperoncino',n:'Peperoncino',c:'#ec6a55',s:'#c44a37'},
+  {k:'neve',n:'Neve',c:'#fbf8f3',s:'#d8d0c4'}
 ];
 const FACES = [
   {k:'felice',n:'Felice'},{k:'affamato',n:'Affamato'},{k:'cool',n:'Cool'},
-  {k:'innamorato',n:'Innamorato'},{k:'assonnato',n:'Pieno'}
+  {k:'innamorato',n:'Innamorato'},{k:'assonnato',n:'Pieno'},
+  {k:'occhiolino',n:'Occhiolino'},{k:'stupito',n:'Stupito'},{k:'grinta',n:'Grinta'},{k:'linguaccia',n:'Linguaccia'}
 ];
 const ACCS = [
   {k:'nessuno',n:'Niente'},{k:'chef',n:'Cappello chef'},{k:'hachimaki',n:'Fascia'},
-  {k:'corona',n:'Corona'},{k:'bacchette',n:'Bacchette'},{k:'fiocco',n:'Fiocco'}
+  {k:'corona',n:'Corona'},{k:'bacchette',n:'Bacchette'},{k:'fiocco',n:'Fiocco'},
+  {k:'casco',n:'Casco da corsa'},{k:'cuffie',n:'Cuffie'},{k:'cowboy',n:'Cowboy'},{k:'berretto',n:'Berretto'},
+  {k:'baffi',n:'Baffoni'},{k:'aureola',n:'Aureola'},{k:'corna',n:'Cornetti'},{k:'girandola',n:'Elica'}
+];
+const SHOES = [
+  {k:'rosso',n:'Rosse',c:'#e5503f'},{k:'blu',n:'Blu',c:'#3f7be5'},{k:'verde',n:'Verdi',c:'#3fae5a'},
+  {k:'oro',n:'Oro',c:'#f2c335'},{k:'rosa',n:'Rosa',c:'#f07ab8'},{k:'nero',n:'Nere',c:'#26222a'},{k:'bianco',n:'Bianche',c:'#f4f1ec'},{k:'arancio',n:'Arancio',c:'#f28c28'}
 ];
 
 /* ---------- character drawing ---------- */
@@ -297,23 +353,39 @@ function gyozaSVG(o={}){
   if(face==='cool') f=`<path d="M38 58 H82 V62 Q80 70 72 70 Q65 70 63 62 H57 Q55 70 48 70 Q40 70 38 62 Z" fill="#1a1a1f"/><path d="M42 61 l6 0" stroke="#fff" stroke-width="1.6" opacity=".6"/><path d="M54 75 Q61 78 67 73" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
   if(face==='innamorato') f=`<path d="M47 67 l-5 -5 a3 3 0 0 1 5 -3 a3 3 0 0 1 5 3 z" fill="#e5503f"/><path d="M73 67 l-5 -5 a3 3 0 0 1 5 -3 a3 3 0 0 1 5 3 z" fill="#e5503f"/><path d="M54 72 Q60 77 66 72" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`+cheeks;
   if(face==='assonnato') f=`<path d="M42 63 Q47 67 52 63" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M68 63 Q73 67 78 63" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><ellipse cx="60" cy="74" rx="3.5" ry="3" fill="${ink}"/>`+cheeks;
+  if(face==='occhiolino') f=`<circle cx="47" cy="63" r="4" fill="${ink}"/><path d="M68 64 Q73 60 78 64" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M52 71 Q61 79 68 70" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/>`+cheeks;
+  if(face==='stupito') f=`<circle cx="47" cy="61" r="5" fill="#fff"/><circle cx="73" cy="61" r="5" fill="#fff"/><circle cx="47" cy="62" r="2.6" fill="${ink}"/><circle cx="73" cy="62" r="2.6" fill="${ink}"/><ellipse cx="60" cy="75" rx="4" ry="5" fill="${ink}"/>`;
+  if(face==='grinta') f=`<path d="M40 55 L52 59" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><path d="M80 55 L68 59" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><circle cx="47" cy="64" r="3.6" fill="${ink}"/><circle cx="73" cy="64" r="3.6" fill="${ink}"/><path d="M52 74 L68 74" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><path d="M55 74 v3 M60 74 v3 M65 74 v3" stroke="${ink}" stroke-width="1.6"/>`;
+  if(face==='linguaccia') f=`<path d="M42 63 Q47 59 52 63" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M68 63 Q73 59 78 63" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M51 70 Q60 75 69 70" stroke="${ink}" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M56 72 Q57 82 61 82 Q65 82 65 72 Z" fill="#ff6f86"/>`+cheeks;
   let a='', back='';
   if(acc==='chef') a=`<rect x="44" y="20" width="32" height="10" rx="2" fill="#fff" stroke="#ccc"/><circle cx="48" cy="14" r="9" fill="#fff"/><circle cx="60" cy="9" r="10" fill="#fff"/><circle cx="72" cy="14" r="9" fill="#fff"/><rect x="44" y="14" width="32" height="10" fill="#fff"/>`;
   if(acc==='hachimaki') a=`<path d="M24 46 Q60 26 96 46 L94 53 Q60 34 26 53 Z" fill="#fff"/><circle cx="60" cy="40" r="5" fill="#e5503f"/><path d="M95 48 l12 -6 l-2 9 z M95 50 l11 6 l-9 3 z" fill="#fff"/>`;
   if(acc==='corona') a=`<path d="M44 34 L46 16 L54 26 L60 12 L66 26 L74 16 L76 34 Z" fill="#f2c335" stroke="#b8861a" stroke-width="1.5" stroke-linejoin="round"/><circle cx="60" cy="27" r="2.6" fill="#e5503f"/>`;
   if(acc==='bacchette') back=`<rect x="70" y="2" width="5" height="70" rx="2.5" fill="#a5713d" transform="rotate(28 72 37)"/><rect x="80" y="4" width="5" height="70" rx="2.5" fill="#8a5a2c" transform="rotate(40 82 39)"/>`;
+  if(acc==='casco') a=`<path d="M22 54 Q24 22 60 20 Q96 22 98 54 Q60 44 22 54 Z" fill="#e5503f"/><path d="M30 46 Q60 36 90 46" stroke="#fff" stroke-width="4" fill="none"/><path d="M58 20 h4 v28 h-4 z" fill="#fff" opacity=".85"/>`;
+  if(acc==='cuffie') a=`<path d="M22 60 Q22 18 60 18 Q98 18 98 60" stroke="#2c2b31" stroke-width="5" fill="none"/><rect x="14" y="52" width="14" height="22" rx="6" fill="#3f7be5"/><rect x="92" y="52" width="14" height="22" rx="6" fill="#3f7be5"/>`;
+  if(acc==='cowboy') a=`<ellipse cx="60" cy="33" rx="40" ry="7" fill="#9a6232"/><path d="M42 33 Q42 10 60 12 Q78 10 78 33 Z" fill="#b5763d"/><path d="M42 28 h36 v4 h-36 z" fill="#5a3412"/>`;
+  if(acc==='berretto') a=`<path d="M36 36 Q38 16 62 16 Q84 18 84 36 Z" fill="#3f7be5"/><path d="M80 33 Q98 32 104 38 Q92 40 80 38 Z" fill="#2d5fb8"/><circle cx="61" cy="16" r="3" fill="#2d5fb8"/>`;
+  if(acc==='baffi') a=`<path d="M60 70 Q50 64 40 70 Q46 76 52 73 Q57 71 60 72 Q63 71 68 73 Q74 76 80 70 Q70 64 60 70 Z" fill="#3a2418"/>`;
+  if(acc==='aureola') a=`<ellipse cx="60" cy="14" rx="22" ry="6" fill="none" stroke="#f2c335" stroke-width="4"/>`;
+  if(acc==='corna') a=`<path d="M38 36 Q32 18 40 10 Q42 24 48 32 Z" fill="#e5503f"/><path d="M82 36 Q88 18 80 10 Q78 24 72 32 Z" fill="#e5503f"/>`;
+  if(acc==='girandola') a=`<path d="M48 30 Q48 16 60 16 Q72 16 72 30 Z" fill="#f2c335"/><path d="M60 16 v-6" stroke="#2c2b31" stroke-width="2"/><g class="prop"><ellipse cx="51" cy="9" rx="9" ry="2.6" fill="#e5503f"/><ellipse cx="69" cy="9" rx="9" ry="2.6" fill="#3f7be5"/></g>`;
   if(acc==='fiocco') a=`<path d="M60 30 L44 20 Q40 30 44 40 Z M60 30 L76 20 Q80 30 76 40 Z" fill="#e5503f"/><circle cx="60" cy="30" r="5" fill="#b8352a"/>`;
-  return `<svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${back}
-  <ellipse cx="60" cy="92" rx="44" ry="5" fill="#000" opacity=".25"/>
-  <path d="M8 80 Q14 30 60 28 Q106 30 112 80 Q60 96 8 80 Z" fill="${d.c}"/>
+  const sh=(SHOES.find(x=>x.k===o.shoes)||SHOES[0]).c;
+  const legs = o.run ? `<g class="leg l"><path d="M46 88 L42 106" stroke="${d.s}" stroke-width="5" stroke-linecap="round"/><ellipse cx="39" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>
+    <g class="leg r"><path d="M74 88 L78 106" stroke="${d.s}" stroke-width="5" stroke-linecap="round"/><ellipse cx="81" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>` : '';
+  return `<svg viewBox="0 0 120 ${o.run?116:100}" class="${o.run?'running':''}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${back}${legs}
+  ${o.run?'':'<ellipse cx="60" cy="92" rx="44" ry="5" fill="#000" opacity=".25"/>'}
+  <g class="body"><path d="M8 80 Q14 30 60 28 Q106 30 112 80 Q60 96 8 80 Z" fill="${d.c}"/>
   <path d="M8 80 Q60 96 112 80 Q108 88 60 92 Q12 88 8 80 Z" fill="#c9792a"/>
   <path d="M10 80 Q60 93 110 80" stroke="#9c5418" stroke-width="2" fill="none" opacity=".6"/>
   <g fill="none" stroke="${d.s}" stroke-width="2.6" stroke-linecap="round">
     <path d="M30 38 Q34 46 33 52"/><path d="M42 32 Q45 41 44 48"/><path d="M54 29 Q56 38 56 45"/><path d="M66 29 Q65 38 64 45"/><path d="M78 32 Q75 41 76 48"/><path d="M90 38 Q86 46 87 52"/>
   </g>
   <path d="M14 66 Q16 44 30 38" stroke="#fff" stroke-width="3" fill="none" opacity=".35" stroke-linecap="round"/>
-  ${f}${a}</svg>`;
+  ${f}${a}</g></svg>`;
 }
+function runnerSVG(p){ return gyozaSVG({...p, run:true}); }
 function avatarHTML(p, cls=''){
   if(!p) return '';
   const svg = gyozaSVG(p);
@@ -407,29 +479,38 @@ function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg
 function go(name,extra={}){ view={name,...extra}; render(); window.scrollTo({top:0}); }
 function status(){}
 const UI={full:false};
-function topBoardHTML(highlight){
+function raceHTML(highlight, limit=5){
   const r=ranking();
-  if(!r.length) return `<p class="sub">La classifica si riempie appena entra il primo giocatore.</p>`;
-  const row=(x,big)=>`<li class="${big?'big p'+x.pos:''} ${x.id===highlight?'you':''}">
+  if(!r.length) return `<p class="sub">La gara parte appena entra il primo giocatore.</p>`;
+  const max=Math.max(1,r[0].n);
+  let lanes=r.slice(0,limit); const mine=r.find(x=>x.id===highlight);
+  if(mine && !lanes.includes(mine)) lanes=[...lanes.slice(0,limit-1),mine];
+  return `<button class="race" data-act="full" aria-expanded="${UI.full}" aria-label="Apri la classifica completa">
+    ${lanes.map(x=>{ const pct=x.n/max; return `<div class="lane ${x.id===highlight?'you':''} p${x.pos}">
+      <span class="pos">${x.pos}</span>
+      <div class="track"><span class="finish"></span>
+        <div class="runner ${pct>.55?'lbl-left':''}" style="left:calc((100% - 40px) * ${pct.toFixed(3)})">${runnerSVG(x)}<span class="rn">${esc(x.name)}</span></div></div>
+      <span class="n">${x.n}</span></div>`; }).join('')}
+    <span class="race-hint">${UI.full?'Chiudi la classifica ▴':(r.length>lanes.length?`Tocca per la classifica completa · ${r.length} giocatori ▾`:'Tocca per la classifica completa ▾')}</span>
+  </button>
+  ${UI.full?fullListHTML(highlight):''}`;
+}
+function fullListHTML(highlight){
+  const r=ranking(), first=r[0]?.n||0;
+  return `<ol class="rank full-list">${r.map(x=>`<li class="${x.id===highlight?'you':''} p${x.pos}">
       <span class="pos">${x.pos}</span>${avatarHTML(x)}
       <div class="nm">${esc(x.name)}${x.id===highlight?' <span class="tu">tu</span>':''}</div>
-      <span class="n">${x.n}</span></li>`;
-  const top=r.slice(0,3), rest=r.slice(3), mine=r.find(x=>x.id===highlight);
-  const meOut = mine && !top.includes(mine) && !UI.full;
-  return `<ol class="rank podium-list">${top.map(x=>row(x,true)).join('')}</ol>
-    ${meOut?`<ol class="rank"><li class="gap">⋯</li>${row(mine,false)}</ol>`:''}
-    ${rest.length?`<button class="more" data-act="full" aria-expanded="${UI.full}">${UI.full?'Chiudi classifica completa ▴':`Classifica completa · ${r.length} giocatori ▾`}</button>`:''}
-    ${UI.full&&rest.length?`<ol class="rank">${rest.map(x=>row(x,false)).join('')}</ol>`:''}`;
+      <span class="gapn">${x.pos===1?'':'−'+(first-x.n)}</span><span class="n">${x.n}</span></li>`).join('')}</ol>`;
 }
 function timerText(){
   const ts=Object.values(S.bites).map(b=>b.t).filter(t=>typeof t==='number');
-  if(!ts.length) return '⏱ in attesa del primo gyoza';
+  if(!ts.length) return '⏱ 0:00';
   const sec=Math.max(0,Math.floor((Date.now()-Math.min(...ts))/1000));
   const h=Math.floor(sec/3600), m=Math.floor(sec/60)%60, x=sec%60, pad=v=>String(v).padStart(2,'0');
-  return '⏱ '+(h?h+':'+pad(m):m)+':'+pad(x)+' di gara';
+  return '⏱ '+(h?h+':'+pad(m):m)+':'+pad(x);
 }
 setInterval(()=>{ document.querySelectorAll('.timer').forEach(el=>el.textContent=timerText()); },1000);
-function boardHead(){ return `<div class="board-head"><h2>Classifica</h2><span class="timer">${timerText()}</span></div>`; }
+function boardHead(){ const ended=!!S.game?.ended; return `<div class="board-head"><h2>La gara</h2><div class="head-r"><span class="timer">${timerText()}</span><button class="btn tiny" data-act="finale">${ended?'Premiazione':'Chiudi e premia'}</button></div></div>`; }
 
 function boardHTML(highlight){
   const r=ranking(); const top = Math.max(1,...r.map(x=>x.n));
@@ -481,7 +562,7 @@ function renderEditor(){
     <p class="eyebrow">${view.editId?'Modifica personaggio':'Nuovo personaggio'}</p>
     <h1 style="margin-bottom:18px">${view.editId?'Ritocca il tuo gyoza':'Crea il tuo gyoza'}</h1>
     <div class="editor">
-      <div class="stage"><div id="preview">${avatarHTML(d)}</div><div class="plate"></div><b id="prevName" style="font-family:var(--display);font-weight:400;font-size:1.3rem">${esc(d.name)||'Senza nome'}</b></div>
+      <div class="stage"><div id="preview"><div class="av">${runnerSVG(d)}</div></div><div class="plate"></div><b id="prevName" style="font-family:var(--display);font-weight:400;font-size:1.3rem">${esc(d.name)||'Senza nome'}</b></div>
       <div class="form">
         <div class="field"><label for="nm">Nome</label><input id="nm" type="text" maxlength="18" placeholder="Es. Giulia la Divoratrice" value="${esc(d.name)}" autocomplete="off"></div>
         <div class="field"><span class="lbl">Foto profilo</span>
@@ -491,6 +572,7 @@ function renderEditor(){
         <div class="field"><span class="lbl">Impasto</span><div class="opts">${chip(DOUGH,'dough',o=>`<span class="swatch" style="background:${o.c}"></span>`)}</div></div>
         <div class="field"><span class="lbl">Faccia</span><div class="opts">${chip(FACES,'face',o=>`<span class="mini">${gyozaSVG({...d,face:o.k,acc:'nessuno'})}</span>`)}</div></div>
         <div class="field"><span class="lbl">Accessorio</span><div class="opts">${chip(ACCS,'acc',o=>`<span class="mini">${gyozaSVG({...d,acc:o.k})}</span>`)}</div></div>
+        <div class="field"><span class="lbl">Scarpe da corsa</span><div class="opts">${chip(SHOES,'shoes',o=>`<span class="swatch" style="background:${o.c}"></span>`)}</div></div>
         <div class="row"><button class="btn primary" data-act="save">${view.editId?'Salva':'Siediti al tavolo'}</button><button class="btn ghost" data-act="lobby">Annulla</button></div>
       </div>
     </div></section>`;
@@ -502,25 +584,25 @@ function renderPlay(){
   const ended=!!S.game?.ended;
   const leader=r[0];
   let line='';
-  if(r.length>1){
-    if(mine.pos===1 && r[1].n<n) line=`In testa di ${n-r[1].n}`;
-    else if(mine.pos===1) line='Pari al primo posto';
-    else line=`−${leader.n-n} da ${esc(leader.name)}`;
+  if(r.length>1 && mine){
+    if(mine.pos===1){ const second=r.find(x=>x.id!==me); line = second.n<n ? `In testa · +${n-second.n} su ${esc(second.name)}` : `Primo a pari merito con ${esc(second.name)}`; }
+    else {
+      const idx=r.indexOf(mine); const above=r.slice(0,idx).reverse().find(x=>x.n>n);
+      line = `−${leader.n-n} dal primo` + (above && above!==leader ? ` · −${above.n-n} da ${esc(above.name)}` : '');
+      const tie=r.find(x=>x.id!==me && x.n===n); if(tie) line+=` · pari con ${esc(tie.name)}`;
+    }
   }
   return `<section class="screen hud">
     <aside class="board compact">
       ${boardHead()}
-      ${topBoardHTML(me)}
+      ${raceHTML(me)}
     </aside>
     <div class="me-card" id="meCard">
-      <div class="me-top">${avatarHTML(p)}<div class="who"><b>${esc(p.name)}</b><span>${mine?`${mine.pos}° su ${r.length}`:''}${line?' · '+line:''}</span></div>
+      <div class="me-top">${avatarHTML(p)}<div class="who"><b>${esc(p.name)}</b><span>${line||'Sei l\'unico in gara, per ora'}</span></div>
         <button class="menu-btn" data-act="menu" aria-expanded="${!!UI.menu}" aria-label="Altre opzioni">⋯</button></div>
       ${UI.menu?`<div class="menu">
         <button class="btn ghost" data-act="edit">Modifica personaggio</button>
-        <button class="btn ghost" data-act="lobby">Cambia giocatore</button>
-        <button class="btn ghost" data-act="lobby">Invita amici</button>
-        <button class="btn ghost" data-act="finale">${ended?'Classifica finale':'Chiudi e premia'}</button>
-        <button class="btn ghost" data-act="testfx" style="grid-column:1/-1">Prova un suono del sorpasso</button></div>`:''}
+        <button class="btn ghost" data-act="testfx">Prova il suono</button></div>`:''}
       ${ended?`<p class="notice">Serata chiusa. Riaprila dalla classifica finale per continuare.</p>`:''}
       <div class="eat-row">
         <div class="count-box"><div class="big-count" id="bigCount">${n}</div><div class="big-label">gyoza</div></div>
@@ -545,7 +627,7 @@ function renderTable(){
       <div class="row"><button class="btn" data-act="new" ${full||ro?'disabled':''}>+ Giocatore</button><button class="btn" data-act="finale">Classifica finale</button></div></div>
     ${ended?`<p class="notice" style="margin-bottom:14px">La serata è chiusa. Riaprila dalla classifica finale per continuare.</p>`:''}
     <div class="table"><div class="seats">${seats}</div>
-      <aside class="board compact">${boardHead()}${topBoardHTML(null)}</aside></div>
+      <aside class="board compact">${boardHead()}${raceHTML(null,10)}</aside></div>
   </section>`;
 }
 
@@ -736,7 +818,9 @@ function runFx(){
   const rain=Array.from({length:18},(_,i)=>`<span class="drop" style="left:${(i*53)%100}%;animation-delay:${(i%6)*0.18}s;animation-duration:${1.8+(i%4)*0.35}s">${gyozaSVG({dough:DOUGH[i%DOUGH.length].k,face:FACES[i%FACES.length].k})}</span>`).join('');
   fxEl.innerHTML=`<div class="rain" aria-hidden="true">${rain}</div>
     <div class="fx-card" role="alert"><p class="fx-theme">${esc(th.k)}</p><p class="fx-k">${esc(th.title)}</p>
-      <div class="fx-duel">${avatarHTML(A)}<span class="fx-arrow">›</span>${avatarHTML(Bs[0])}</div>
+      <div class="fx-track"><span class="fx-line"></span>
+        <div class="fx-run fx-b">${runnerSVG(Bs[0])}<span>${esc(Bs[0].name)}</span></div>
+        <div class="fx-run fx-a">${runnerSVG(A)}<span>${esc(A.name)}</span></div></div>
       <p class="fx-t"><b>${esc(A.name)}</b> supera <b>${esc(bNames)}</b></p><p class="fx-s">${ev.n} gyoza e non si ferma</p>
       <button class="btn primary" data-act="fxclose">Continua a mangiare</button></div>`;
   fxEl.hidden=false;
@@ -798,7 +882,7 @@ document.addEventListener('click', async e=>{
   if(act==='new'){
     if(Object.keys(S.players).length>=MAX){ toast('Tavolo pieno: massimo 10 giocatori'); return; }
     const k=Object.keys(S.players).length;
-    go('editor',{from:view.name,editId:null,draft:{name:'',dough:DOUGH[k%DOUGH.length].k,face:FACES[k%FACES.length].k,acc:'nessuno',photo:null}});
+    go('editor',{from:view.name,editId:null,draft:{name:'',dough:DOUGH[k%DOUGH.length].k,face:FACES[k%FACES.length].k,acc:'nessuno',shoes:SHOES[k%SHOES.length].k,photo:null}});
   }
   if(act==='edit'){ UI.menu=false; const p=S.players[me]; go('editor',{editId:me,draft:{...p}}); }
   if(act==='lobby'){ UI.menu=false; go('lobby'); }
@@ -807,7 +891,7 @@ document.addEventListener('click', async e=>{
   if(act==='fxclose'){ clearTimeout(runFx.t); closeFx(); }
   if(act==='leave') leaveRoom();
   if(act==='copy'){ const v=shareLink(); try{ await navigator.clipboard.writeText(v); toast('Link copiato'); }catch{ const lb=document.getElementById('linkbox'); lb?.select(); toast('Seleziona il link e copialo'); } }
-  if(act==='share'){ try{ await navigator.share({title:'Coppa Gyoza',text:'Entra nella Coppa Gyoza e segna i tuoi gyoza!',url:shareLink()}); }catch{} }
+  if(act==='share'){ try{ await navigator.share({title:'Gyoza Grand Prix',text:'Entra nel Gyoza Grand Prix e segna i tuoi gyoza!',url:shareLink()}); }catch{} }
   if(act==='create'){ const u=normalizeDb(document.getElementById('dburl')?.value); if(!u){ toast('Indirizzo non valido: deve finire con firebasedatabase.app'); return; } CONN={db:u,r:roomCode()}; connect(); }
   if(act==='table') go('table');
   if(act==='finale'){ UI.menu=false; go('finale'); }
@@ -818,6 +902,7 @@ document.addEventListener('click', async e=>{
     render();
     fxQueue.unshift({a:me,bs:[other],n:counts()[me]||0,seed}); fxBusy=false; runFx();
     diagnose(); return; }
+  if(act==='invite'){ if(!CONN) return; const v=shareLink(); if(navigator.share){ try{ await navigator.share({title:'Gyoza Grand Prix',text:'Entra nel Gyoza Grand Prix e segna i tuoi gyoza!',url:v}); }catch{} } else { try{ await navigator.clipboard.writeText(v); toast('Link copiato: mandalo nel gruppo'); }catch{ toast(v); } } return; }
   if(act==='menu'){ UI.menu=!UI.menu; render(); }
   if(act==='nophoto'){ view.draft.photo=null; refreshEditor(); }
   if(act==='save'){
@@ -827,7 +912,7 @@ document.addEventListener('click', async e=>{
     if(taken){ toast('Questo nome è già al tavolo, scegline un altro'); return; }
     if(!view.editId && Object.keys(S.players).length>=MAX){ toast('Tavolo pieno: massimo 10 giocatori'); return; }
     const id = view.editId || uid();
-    const data={name,dough:d.dough,face:d.face,acc:d.acc,photo:d.photo||null,createdAt: view.editId?(S.players[id]?.createdAt||Date.now()):Date.now()};
+    const data={name,dough:d.dough,face:d.face,acc:d.acc,shoes:d.shoes||'rosso',photo:d.photo||null,createdAt: view.editId?(S.players[id]?.createdAt||Date.now()):Date.now()};
     a.disabled=true;
     const ok = await putPlayer(id,data);
     if(ok){ const wasEdit=!!view.editId; me=id; setMe(me); go(view.from==='table'?'table':'play'); toast(wasEdit?'Personaggio aggiornato':`Benvenuto al tavolo, ${name}!`); } else a.disabled=false;
