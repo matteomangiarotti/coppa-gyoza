@@ -206,6 +206,7 @@ h2{font-size:1.25rem}
 @keyframes fall{to{transform:translateY(115vh) rotate(320deg)}}
 .fx-card{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--lacquer);border:2px solid var(--crust);border-radius:24px;padding:22px 20px;max-width:360px;width:100%;animation:boom .55s cubic-bezier(.2,1.6,.4,1)}
 @keyframes boom{from{transform:scale(.4) rotate(-6deg)}to{transform:none}}
+.fx-theme{margin:0;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--scallion);font-weight:700}
 .fx-k{margin:0;font-family:var(--display);font-size:clamp(2.4rem,12vw,3.4rem);color:var(--crust);line-height:1;text-shadow:0 5px 0 #5a3412;animation:wob .5s ease-in-out 3}
 @keyframes wob{50%{transform:scale(1.08) rotate(-2deg)}}
 .fx-duel{display:flex;align-items:center;gap:12px}
@@ -255,7 +256,6 @@ h2{font-size:1.25rem}
       <span id="brandIcon"></span>
       <span><b>Coppa Gyoza</b><small>Chi ne mangia di più?</small></span>
     </button>
-    <button class="sound" id="sound" aria-pressed="true" title="Musica dei sorpassi">♪ Suono sì</button>
   </header>
   <main id="app"></main>
 </div>
@@ -419,10 +419,10 @@ function topBoardHTML(highlight){
 }
 function timerText(){
   const ts=Object.values(S.bites).map(b=>b.t).filter(t=>typeof t==='number');
-  if(!ts.length) return 'Si parte al primo gyoza';
+  if(!ts.length) return '⏱ in attesa del primo gyoza';
   const sec=Math.max(0,Math.floor((Date.now()-Math.min(...ts))/1000));
   const h=Math.floor(sec/3600), m=Math.floor(sec/60)%60, x=sec%60, pad=v=>String(v).padStart(2,'0');
-  return 'Si mangia da '+(h?h+':'+pad(m):m)+':'+pad(x);
+  return '⏱ '+(h?h+':'+pad(m):m)+':'+pad(x)+' di gara';
 }
 setInterval(()=>{ document.querySelectorAll('.timer').forEach(el=>el.textContent=timerText()); },1000);
 function boardHead(){ return `<div class="board-head"><h2>Classifica</h2><span class="timer">${timerText()}</span></div>`; }
@@ -591,57 +591,97 @@ function render(){
 function refreshEditor(){ view.force=true; const y=window.scrollY; render(); window.scrollTo({top:y}); }
 
 
-/* ---------- sorpassi: animation + music ---------- */
-const FX_MIN=15;
-let prevCounts=null, fxQueue=[], fxBusy=false;
-let soundOn = ls.get('gyoza.sound',true);
-let AC=null;
-function unlockAudio(){ try{ if(!AC){ const C=window.AudioContext||window.webkitAudioContext; if(C) AC=new C(); } if(AC&&AC.state==='suspended') AC.resume(); }catch{} }
-document.addEventListener('pointerdown', unlockAudio, {passive:true});
-function playFanfare(){
-  if(!soundOn||!AC) return;
-  const t0=AC.currentTime+0.05, g=AC.createGain(); g.gain.value=0.18; g.connect(AC.destination);
-  const note=(f,t,d,type='square',v=1)=>{ const o=AC.createOscillator(), e=AC.createGain(); o.type=type; o.frequency.value=f;
-    e.gain.setValueAtTime(0,t0+t); e.gain.linearRampToValueAtTime(v,t0+t+0.02); e.gain.exponentialRampToValueAtTime(0.001,t0+t+d);
-    o.connect(e); e.connect(g); o.start(t0+t); o.stop(t0+t+d+0.05); };
-  const drum=(t)=>{ const b=AC.createBuffer(1,AC.sampleRate*0.15,AC.sampleRate), d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length);
-    const src=AC.createBufferSource(), e=AC.createGain(); e.gain.value=0.7; src.buffer=b; src.connect(e); e.connect(g); src.start(t0+t); };
-  // ta-ta-ta-taaa, then a rising flourish
-  [[523,0,.12],[523,.14,.12],[523,.28,.12],[659,.42,.5],[587,.95,.14],[659,1.1,.14],[784,1.25,.14],[1047,1.4,.9]].forEach(([f,t,d])=>{ note(f,t,d); note(f/2,t,d,'triangle',.8); });
-  [0,.14,.28,.42,1.4].forEach(drum);
+/* ---------- sorpassi: animation for everyone, sound on the overtaker's phone ---------- */
+const FX_MIN=10;
+let prevCounts=null, fxQueue=[], fxBusy=false, AC=null, MASTER=null;
+function unlockAudio(){
+  try{
+    if(!AC){ const C=window.AudioContext||window.webkitAudioContext; if(C){ AC=new C(); MASTER=AC.createDynamicsCompressor(); MASTER.connect(AC.destination); } }
+    if(AC&&AC.state==='suspended') AC.resume();
+    if(window.speechSynthesis && !unlockAudio.spoke){ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); unlockAudio.spoke=true; }
+  }catch{}
 }
+document.addEventListener('pointerdown', unlockAudio, {passive:true});
+
+/* synth building blocks */
+const T=()=>AC.currentTime+0.05;
+function env(node,t,a,peak,d){ const g=AC.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+d); node.connect(g); g.connect(MASTER); return g; }
+function tone(f,t,d,type='sawtooth',v=.2,cut=2500){ const o=AC.createOscillator(); o.type=type; o.frequency.value=f; const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=cut; o.connect(lp); env(lp,t,.02,v,d); o.start(t); o.stop(t+d+.1); return o; }
+function chord(fs,t,d,v=.12,type='sawtooth'){ fs.forEach(f=>{ tone(f,t,d,type,v); tone(f*1.006,t,d,type,v*.6); }); }
+function noise(t,d,v=.3,freq=1000,q=.7,type='bandpass',attack=.01){ const b=AC.createBuffer(1,Math.max(1,AC.sampleRate*d),AC.sampleRate), c=b.getChannelData(0); for(let i=0;i<c.length;i++) c[i]=Math.random()*2-1;
+  const src=AC.createBufferSource(); src.buffer=b; const f=AC.createBiquadFilter(); f.type=type; f.frequency.value=freq; f.Q.value=q; src.connect(f); env(f,t,attack,v,d); src.start(t); return src; }
+function kick(t,v=.9){ const o=AC.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+.25); env(o,t,.005,v,.3); o.start(t); o.stop(t+.4); }
+function snare(t,v=.4){ noise(t,.18,v,1800,.6); tone(190,t,.08,'triangle',.25); }
+function timpani(t,f=73,v=.8){ const o=AC.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(f*1.3,t); o.frequency.exponentialRampToValueAtTime(f,t+.12); env(o,t,.01,v,1.2); o.start(t); o.stop(t+1.4); noise(t,.25,.25,300,.8); }
+function crowd(t,d,v=.35){ noise(t,d,v,700,.4,'bandpass',d*.35); noise(t,d,v*.5,1500,.6,'bandpass',d*.5); }
+function horn(t,d=.45){ chord([466,587,698],t,d,.11,'sawtooth'); }
+function whistle(t,d=.6){ const o=AC.createOscillator(); o.type='sine'; o.frequency.value=2900; const l=AC.createOscillator(), lg=AC.createGain(); l.frequency.value=28; lg.gain.value=180; l.connect(lg); lg.connect(o.frequency); env(o,t,.01,.25,d); o.start(t); o.stop(t+d+.1); l.start(t); l.stop(t+d+.1); }
+function engine(t,d=2.2){ const o=AC.createOscillator(), o2=AC.createOscillator(); o.type='sawtooth'; o2.type='square';
+  o.frequency.setValueAtTime(90,t); o.frequency.exponentialRampToValueAtTime(520,t+d*.55); o.frequency.exponentialRampToValueAtTime(160,t+d);
+  o2.frequency.setValueAtTime(91,t); o2.frequency.exponentialRampToValueAtTime(523,t+d*.55); o2.frequency.exponentialRampToValueAtTime(158,t+d);
+  const lp=AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1400; o.connect(lp); o2.connect(lp); env(lp,t,d*.4,.28,d*.6); o.start(t); o2.start(t); o.stop(t+d+.1); o2.stop(t+d+.1); }
+function bell(t){ [880,1320,2210].forEach((f,i)=>tone(f,t,1.6,'sine',.18/(i+1),8000)); }
+function arp(notes,t,step=.08,type='square',v=.1){ notes.forEach((f,i)=>tone(f,t+i*step,step*1.6,type,v,6000)); }
+
+/* themes: visuals are the same on every phone, sound + voice only on the overtaker's */
+const THEMES=[
+  {k:'Telecronaca F1',title:'Sorpasso in pista!',play:t=>{ engine(t,2.4); crowd(t+1.2,2.6,.3); chord([392,494,587],t+2.2,1.2,.1); }, voice:(a,b)=>`Attenzione, ${a} prende la scia... si butta all'interno... e passa! Sorpasso da manuale su ${b}!`},
+  {k:'Telecronaca calcio',title:'Che sorpasso!',play:t=>{ whistle(t,.5); crowd(t+.3,3.2,.45); [0,.5,1,1.5].forEach(x=>kick(t+.5+x)); horn(t+2.2,.6); }, voice:(a,b)=>`${a} si accentra, salta ${b}... e va! Che azione, signore e signori, che azione!`},
+  {k:'Colonna sonora epica',title:'Leggendario!',play:t=>{ timpani(t); timpani(t+.35,73); timpani(t+.7,82); chord([196,247,294],t+.9,1.1,.12); chord([220,277,330],t+1.9,.9,.12); chord([262,330,392,523],t+2.7,1.8,.13); timpani(t+2.7,65,1); }, voice:(a,b)=>`In un'epoca di gyoza... un solo eroe si è alzato. ${a}. E ${b} non sarà mai più lo stesso.`},
+  {k:'Sala giochi',title:'Level up!',play:t=>{ arp([523,659,784,1047,784,1047,1319],t,.07); arp([659,784,988,1319,1568],t+.7,.06); arp([1047,1319,1568,2093],t+1.2,.09,'square',.12); }, voice:(a,b)=>`Nuovo record! ${a} supera ${b}. Inserire un altro gyoza per continuare.`},
+  {k:'Ring di boxe',title:'Al tappeto!',play:t=>{ bell(t); bell(t+.45); crowd(t+.5,2.6,.4); [0,.25,.5].forEach(x=>snare(t+.8+x)); kick(t+1.6); }, voice:(a,b)=>`${b} è al tappeto! Uno, due, tre... ${a} è il nuovo campione dei pesi gyoza!`},
+  {k:'Edizione straordinaria',title:'Ultim\'ora!',play:t=>{ chord([523,659,784],t,.25,.1,'square'); chord([587,740,880],t+.3,.25,.1,'square'); chord([659,831,988],t+.6,.9,.1,'square'); [0,.15,.3,.45,.6].forEach(x=>snare(t+x,.2)); }, voice:(a,b)=>`Interrompiamo le trasmissioni per una notizia clamorosa: ${a} ha appena superato ${b}. Seguiranno aggiornamenti.`},
+  {k:'Tappa di montagna',title:'Scatto in salita!',play:t=>{ crowd(t,3.4,.4); horn(t+.4,.35); horn(t+.9,.35); horn(t+1.4,.8); kick(t+1.4); }, voice:(a,b)=>`Scatto sull'ultima rampa! ${a} si alza sui pedali e stacca ${b}. Il pubblico è in delirio!`},
+  {k:'Curva dello stadio',title:'Tutti in piedi!',play:t=>{ [0,.6,1.2,1.8].forEach(x=>{ kick(t+x); snare(t+x+.3); }); horn(t+.1,.3); horn(t+1.3,.3); crowd(t,3.2,.5); }, voice:(a,b)=>`${a}! ${a}! ${a}! Lo stadio canta per lui. ${b}, oggi non è la tua serata.`}
+];
+function speak(text){
+  try{
+    if(!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    const vs=speechSynthesis.getVoices(); const it=vs.find(v=>/^it/i.test(v.lang));
+    if(it) u.voice=it; u.lang='it-IT'; u.rate=1.08; u.pitch=1.05; u.volume=1;
+    speechSynthesis.speak(u);
+  }catch{}
+}
+try{ window.speechSynthesis?.getVoices(); }catch{}
+
 function checkOvertakes(){
   const now=counts();
   if(prevCounts===null){ if(Object.keys(S.players).length) prevCounts=now; return; }
-  let best=null;
-  for(const a in now){ for(const b in now){ if(a===b) continue;
-    const pa=prevCounts[a]??0, pb=prevCounts[b]??0;
-    if(now[a]>=FX_MIN && pa<=pb && now[a]>now[b] && now[a]>pa){
-      const ahead=Object.values(now).filter(v=>v>now[b]).length; // b's rank-ish
-      if(!best || ahead<best.ahead) best={a,b,ahead};
-    } } }
+  for(const a in now){
+    const pa=prevCounts[a]??0;
+    if(now[a]<FX_MIN || now[a]<=pa) continue;
+    const passed=Object.keys(now).filter(b=>b!==a && b in prevCounts && pa<=prevCounts[b] && now[a]>now[b]);
+    if(passed.length){ passed.sort((x,y)=>now[y]-now[x]); fxQueue.push({a,bs:passed,n:now[a],seed:Object.keys(S.bites).length}); }
+  }
   prevCounts=now;
-  if(best){ fxQueue.push({a:best.a,b:best.b,n:now[best.a]}); runFx(); }
+  runFx();
 }
 function runFx(){
   if(fxBusy||!fxQueue.length) return;
-  const ev=fxQueue.shift(), A=S.players[ev.a], B=S.players[ev.b]; if(!A||!B){ runFx(); return; }
+  const ev=fxQueue.shift(), A=S.players[ev.a], Bs=ev.bs.map(id=>S.players[id]).filter(Boolean);
+  if(!A||!Bs.length){ runFx(); return; }
   fxBusy=true;
+  const th=THEMES[ev.seed%THEMES.length];
+  const bNames = Bs.length===1 ? Bs[0].name : Bs.slice(0,-1).map(x=>x.name).join(', ')+' e '+Bs.at(-1).name;
   const fxEl=document.getElementById('fx');
   const rain=Array.from({length:18},(_,i)=>`<span class="drop" style="left:${(i*53)%100}%;animation-delay:${(i%6)*0.18}s;animation-duration:${1.8+(i%4)*0.35}s">${gyozaSVG({dough:DOUGH[i%DOUGH.length].k,face:FACES[i%FACES.length].k})}</span>`).join('');
   fxEl.innerHTML=`<div class="rain" aria-hidden="true">${rain}</div>
-    <div class="fx-card" role="alert"><p class="fx-k">Sorpasso!</p>
-      <div class="fx-duel">${avatarHTML(A)}<span class="fx-arrow">›</span>${avatarHTML(B)}</div>
-      <p class="fx-t"><b>${esc(A.name)}</b> supera <b>${esc(B.name)}</b></p><p class="fx-s">${ev.n} gyoza e non si ferma</p>
+    <div class="fx-card" role="alert"><p class="fx-theme">${esc(th.k)}</p><p class="fx-k">${esc(th.title)}</p>
+      <div class="fx-duel">${avatarHTML(A)}<span class="fx-arrow">›</span>${avatarHTML(Bs[0])}</div>
+      <p class="fx-t"><b>${esc(A.name)}</b> supera <b>${esc(bNames)}</b></p><p class="fx-s">${ev.n} gyoza e non si ferma</p>
       <button class="btn primary" data-act="fxclose">Continua a mangiare</button></div>`;
   fxEl.hidden=false;
-  try{ navigator.vibrate?.([60,40,60,40,160]); }catch{}
-  playFanfare();
-  clearTimeout(runFx.t); runFx.t=setTimeout(closeFx,4500);
+  if(ev.a===me){
+    try{ navigator.vibrate?.([80,40,80,40,240]); }catch{}
+    unlockAudio();
+    try{ if(AC){ th.play(T()); } }catch(e){ console.warn(e); }
+    setTimeout(()=>speak(th.voice(A.name,bNames)), 900);
+  }
+  clearTimeout(runFx.t); runFx.t=setTimeout(closeFx, ev.a===me?8000:5000);
 }
 function closeFx(){ const fxEl=document.getElementById('fx'); fxEl.hidden=true; fxEl.innerHTML=''; fxBusy=false; setTimeout(runFx,300); }
-function paintSound(){ const b=document.getElementById('sound'); if(b){ b.textContent=soundOn?'♪ Suono sì':'♪ Suono no'; b.setAttribute('aria-pressed',String(soundOn)); } }
-document.getElementById('sound').addEventListener('click',()=>{ soundOn=!soundOn; ls.set('gyoza.sound',soundOn); paintSound(); unlockAudio(); });
 
 /* ---------- events ---------- */
 document.getElementById('brand').addEventListener('click',()=>go('lobby'));
@@ -730,7 +770,6 @@ async function eat(e){
   addBite(me);
 }
 
-paintSound();
 render();
 connect();
 window.addEventListener('hashchange',()=>{ const h=parseHash(); if(h && (!CONN || h.r!==CONN.r || h.db!==CONN.db)) location.reload(); });
