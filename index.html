@@ -261,7 +261,7 @@ svg.running .leg.r{animation:stride .32s ease-in-out infinite alternate-reverse}
 @keyframes runA{0%{left:4%}60%{left:46%}100%{left:72%}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .hud{display:grid;gap:12px;grid-template-columns:1fr}
-.hud .board{order:-1}
+.hud .board{order:2}
 @media (min-width:820px){.hud{grid-template-columns:minmax(0,1fr) 340px}.hud .board{order:2}}
 .board.compact{padding:12px 14px}
 .board.compact .board-head{margin-bottom:6px}
@@ -595,7 +595,7 @@ function renderPlay(){
   return `<section class="screen hud">
     <aside class="board compact">
       ${boardHead()}
-      ${raceHTML(me)}
+      ${raceHTML(me,10)}
     </aside>
     <div class="me-card" id="meCard">
       <div class="me-top">${avatarHTML(p)}<div class="who"><b>${esc(p.name)}</b><span>${line||'Sei l\'unico in gara, per ora'}</span></div>
