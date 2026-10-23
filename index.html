@@ -652,7 +652,8 @@ function prepareClip(){
   if(clipReady || !CLIPS.length || !me) return;
   if((counts()[me]||0) < FX_MIN-3) return;
   clipReady=nextClip(); if(!clipReady) return;
-  CLIP.preload='auto'; CLIP.src=clipReady; try{ CLIP.load(); }catch{}
+  // warm the cache with a separate element: never touch CLIP here, it may be playing the current overtake
+  try{ const pre=new Audio(); pre.preload='auto'; pre.muted=true; pre.src=clipReady; pre.load(); prepareClip.pre=pre; }catch{}
 }
 function playClip(){
   if(!CLIPS.length) return false;
