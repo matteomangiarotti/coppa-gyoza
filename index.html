@@ -605,7 +605,7 @@ function unlockAudio(){
     if(window.speechSynthesis && !unlockAudio.spoke){ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); unlockAudio.spoke=true; }
   }catch{}
 }
-document.addEventListener('pointerdown', unlockAudio, {passive:true});
+['pointerdown','touchend','click'].forEach(ev=>document.addEventListener(ev, unlockAudio, {passive:true, capture:true}));
 
 /* ---------- clip audio dalla cartella suoni/ del repository ---------- */
 const REPO = (()=>{ const own=location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'matteomangiarotti';
@@ -616,7 +616,7 @@ const CLIP = new Audio(); CLIP.preload='none';
 const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 let clipUnlocked=false, clipReady=null;
 function unlockClip(){ if(clipUnlocked) return; clipUnlocked=true; try{ CLIP.src=SILENT; const p=CLIP.play(); p&&p.catch(()=>{}); }catch{} }
-document.addEventListener('pointerdown', unlockClip, {passive:true});
+['touchend','click'].forEach(ev=>document.addEventListener(ev, unlockClip, {passive:true, capture:true}));
 async function loadClips(force){
   const cached=ls.get('gyoza.clips2',{at:0,list:[]});
   // reuse a recent non-empty list; an empty list is always re-checked
@@ -733,15 +733,25 @@ function runFx(){
       <p class="fx-t"><b>${esc(A.name)}</b> supera <b>${esc(bNames)}</b></p><p class="fx-s">${ev.n} gyoza e non si ferma</p>
       <button class="btn primary" data-act="fxclose">Continua a mangiare</button></div>`;
   fxEl.hidden=false;
-  if(ev.a===me){
-    try{ navigator.vibrate?.([80,40,80,40,240]); }catch{}
-    unlockAudio();
-    if(!playClip()){
-      try{ if(AC){ th.play(T()); } }catch(e){ console.warn(e); }
-      setTimeout(()=>speak(th.voice(A.name,bNames)), 900);
-    }
-  }
+  if(ev.a===me && Date.now()-soundStartedAt>4000){ overtakeSound(th, A.name, bNames); }
   clearTimeout(runFx.t); runFx.t=setTimeout(closeFx, FX_MS);
+}
+let soundStartedAt=0;
+// starts the overtake sound; called straight from the tap so phones never treat it as autoplay
+function overtakeSound(th, aName, bNames){
+  soundStartedAt=Date.now();
+  try{ navigator.vibrate?.([80,40,80,40,240]); }catch{}
+  unlockAudio();
+  if(!playClip()){
+    try{ if(AC){ th.play(T()); } }catch(e){ console.warn(e); }
+    setTimeout(()=>speak(th.voice(aName,bNames)), 900);
+  }
+}
+function predictOvertake(){
+  const now=counts(); if(!me || !(me in now)) return null;
+  const mine=now[me]+1; if(mine<FX_MIN) return null;
+  const passed=Object.keys(now).filter(b=>b!==me && now[me]<=now[b] && mine>now[b]);
+  return passed.length?passed:null;
 }
 function closeFx(){ const fxEl=document.getElementById('fx'); fxEl.hidden=true; fxEl.innerHTML=''; fxBusy=false; setTimeout(runFx,300); }
 
@@ -780,9 +790,11 @@ document.addEventListener('click', async e=>{
   if(act==='table') go('table');
   if(act==='finale'){ UI.menu=false; go('finale'); }
   if(act==='full'){ UI.full=!UI.full; render(); }
-  if(act==='testfx'){ UI.menu=false; unlockAudio(); unlockClip(); if(!CLIPS.length) await loadClips(true);
-    const other=Object.keys(S.players).find(id=>id!==me)||me; render();
-    fxQueue.unshift({a:me,bs:[other],n:counts()[me]||0,seed:Math.floor(Math.random()*THEMES.length)}); fxBusy=false; runFx();
+  if(act==='testfx'){ UI.menu=false;
+    const other=Object.keys(S.players).find(id=>id!==me)||me; const seed=Math.floor(Math.random()*THEMES.length);
+    overtakeSound(THEMES[seed], S.players[me]?.name||'Tu', S.players[other]?.name||'qualcuno');
+    render();
+    fxQueue.unshift({a:me,bs:[other],n:counts()[me]||0,seed}); fxBusy=false; runFx();
     toast(CLIPS.length?`Suono di prova (${CLIPS.length} clip disponibili)`:'Nessuna clip trovata: uso la musica di riserva'); return; }
   if(act==='menu'){ UI.menu=!UI.menu; render(); }
   if(act==='nophoto'){ view.draft.photo=null; refreshEditor(); }
@@ -833,6 +845,8 @@ async function eat(e){
   fl.style.left=(br.left-cr.left+br.width/2)+'px'; fl.style.top=(br.top-cr.top+20)+'px';
   card.appendChild(fl); setTimeout(()=>fl.remove(),900);
   const bc=document.getElementById('bigCount'); if(bc) bc.textContent=(+bc.textContent)+1; // optimistic
+  const passed=predictOvertake();
+  if(passed){ const th=THEMES[(Object.keys(S.bites).length+1)%THEMES.length]; const names=passed.map(id=>S.players[id]?.name).filter(Boolean); overtakeSound(th, S.players[me].name, names.length>1?names.slice(0,-1).join(', ')+' e '+names.at(-1):names[0]); }
   addBite(me);
 }
 
