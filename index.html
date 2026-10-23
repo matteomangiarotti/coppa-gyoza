@@ -518,7 +518,8 @@ function renderPlay(){
         <button class="btn ghost" data-act="edit">Modifica personaggio</button>
         <button class="btn ghost" data-act="lobby">Cambia giocatore</button>
         <button class="btn ghost" data-act="lobby">Invita amici</button>
-        <button class="btn ghost" data-act="finale">${ended?'Classifica finale':'Chiudi e premia'}</button></div>`:''}
+        <button class="btn ghost" data-act="finale">${ended?'Classifica finale':'Chiudi e premia'}</button>
+        <button class="btn ghost" data-act="testfx" style="grid-column:1/-1">Prova un suono del sorpasso</button></div>`:''}
       ${ended?`<p class="notice">Serata chiusa. Riaprila dalla classifica finale per continuare.</p>`:''}
       <div class="eat-row">
         <div class="count-box"><div class="big-count" id="bigCount">${n}</div><div class="big-label">gyoza</div></div>
@@ -653,7 +654,7 @@ function playClip(){
   try{
     if(!CLIP.src.endsWith(src)){ CLIP.src=src; }
     CLIP.currentTime=0; CLIP.volume=1;
-    const p=CLIP.play(); p&&p.catch(e=>console.warn('clip play',e));
+    const p=CLIP.play(); p&&p.catch(e=>{ console.warn('clip play',e); toast('Il telefono ha bloccato l\'audio: tocca lo schermo e riprova'); try{ if(AC) THEMES[0].play(T()); }catch{} });
     clearTimeout(playClip.t); clearInterval(playClip.f);
     playClip.t=setTimeout(()=>{ // fade out over 0.6s, then stop at 12s
       playClip.f=setInterval(()=>{ CLIP.volume=Math.max(0,CLIP.volume-0.1); if(CLIP.volume<=0.01){ clearInterval(playClip.f); CLIP.pause(); CLIP.volume=1; } },60);
@@ -779,6 +780,10 @@ document.addEventListener('click', async e=>{
   if(act==='table') go('table');
   if(act==='finale'){ UI.menu=false; go('finale'); }
   if(act==='full'){ UI.full=!UI.full; render(); }
+  if(act==='testfx'){ UI.menu=false; unlockAudio(); unlockClip(); if(!CLIPS.length) await loadClips(true);
+    const other=Object.keys(S.players).find(id=>id!==me)||me; render();
+    fxQueue.unshift({a:me,bs:[other],n:counts()[me]||0,seed:Math.floor(Math.random()*THEMES.length)}); fxBusy=false; runFx();
+    toast(CLIPS.length?`Suono di prova (${CLIPS.length} clip disponibili)`:'Nessuna clip trovata: uso la musica di riserva'); return; }
   if(act==='menu'){ UI.menu=!UI.menu; render(); }
   if(act==='nophoto'){ view.draft.photo=null; refreshEditor(); }
   if(act==='save'){
