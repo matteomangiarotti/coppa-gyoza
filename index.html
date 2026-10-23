@@ -236,8 +236,8 @@ h2{font-size:1.25rem}
 .runner.lbl-left .rn{left:auto;right:44px}
 .race-hint{display:block;text-align:center;font-size:.78rem;color:var(--muted);font-weight:700;padding:6px 0 0}
 .full-list{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
-.full-list li{grid-template-columns:24px 32px minmax(0,1fr) auto auto}
-.full-list li .av{width:32px}
+.board .rank.full-list li{grid-template-columns:24px 32px minmax(0,1fr) auto 30px;gap:8px;padding:5px 6px}
+.board .rank.full-list li .av{width:32px}
 .full-list li.p1{background:linear-gradient(90deg,rgba(242,169,59,.25),transparent)}
 .full-list .gapn{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
 /* running animation */
@@ -372,8 +372,8 @@ function gyozaSVG(o={}){
   if(acc==='girandola') a=`<path d="M48 30 Q48 16 60 16 Q72 16 72 30 Z" fill="#f2c335"/><path d="M60 16 v-6" stroke="#2c2b31" stroke-width="2"/><g class="prop"><ellipse cx="51" cy="9" rx="9" ry="2.6" fill="#e5503f"/><ellipse cx="69" cy="9" rx="9" ry="2.6" fill="#3f7be5"/></g>`;
   if(acc==='fiocco') a=`<path d="M60 30 L44 20 Q40 30 44 40 Z M60 30 L76 20 Q80 30 76 40 Z" fill="#e5503f"/><circle cx="60" cy="30" r="5" fill="#b8352a"/>`;
   const sh=(SHOES.find(x=>x.k===o.shoes)||SHOES[0]).c;
-  const legs = o.run ? `<g class="leg l"><path d="M46 88 L42 106" stroke="${d.s}" stroke-width="5" stroke-linecap="round"/><ellipse cx="39" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>
-    <g class="leg r"><path d="M74 88 L78 106" stroke="${d.s}" stroke-width="5" stroke-linecap="round"/><ellipse cx="81" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>` : '';
+  const legs = o.run ? `<g class="leg l"><path d="M46 86 L42 106" stroke="${d.s}" stroke-width="6" stroke-linecap="round"/><ellipse cx="39" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>
+    <g class="leg r"><path d="M74 86 L78 106" stroke="${d.s}" stroke-width="6" stroke-linecap="round"/><ellipse cx="81" cy="108" rx="9" ry="5" fill="${sh}" stroke="#0003"/></g>` : '';
   return `<svg viewBox="0 0 120 ${o.run?116:100}" class="${o.run?'running':''}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${back}${legs}
   ${o.run?'':'<ellipse cx="60" cy="92" rx="44" ry="5" fill="#000" opacity=".25"/>'}
   <g class="body"><path d="M8 80 Q14 30 60 28 Q106 30 112 80 Q60 96 8 80 Z" fill="${d.c}"/>
