@@ -207,6 +207,7 @@ h2{font-size:1.25rem}
 .fx-card{position:relative;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;background:var(--lacquer);border:2px solid var(--crust);border-radius:24px;padding:22px 20px;max-width:360px;width:100%;animation:boom .55s cubic-bezier(.2,1.6,.4,1)}
 @keyframes boom{from{transform:scale(.4) rotate(-6deg)}to{transform:none}}
 .fx-theme{margin:0;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--scallion);font-weight:700}
+.fx-diag{margin:0;font-size:.85rem;background:var(--soy);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--rice)}
 .fx-k{margin:0;font-family:var(--display);font-size:clamp(2.4rem,12vw,3.4rem);color:var(--crust);line-height:1;text-shadow:0 5px 0 #5a3412;animation:wob .5s ease-in-out 3}
 @keyframes wob{50%{transform:scale(1.08) rotate(-2deg)}}
 .fx-duel{display:flex;align-items:center;gap:12px}
@@ -627,7 +628,12 @@ async function loadClips(force){
     const items=await r.json();
     CLIPS=items.filter(x=>x.type==='file' && CLIP_EXT.test(x.name)).map(x=>'suoni/'+encodeURIComponent(x.name));
     ls.set('gyoza.clips2',{at:Date.now(),list:CLIPS});
-  }catch(e){ console.warn('clip list',e); CLIPS=cached.list||[]; }
+  }catch(e){
+    console.warn('clip list via API',e);
+    try{ const r=await fetch('suoni/elenco.json?t='+Date.now(),{cache:'no-store'}); const names=await r.json();
+      CLIPS=names.filter(n=>CLIP_EXT.test(n)).map(n=>'suoni/'+encodeURIComponent(n)); ls.set('gyoza.clips2',{at:Date.now(),list:CLIPS}); CLIPS.source='elenco'; }
+    catch(e2){ console.warn('clip list via elenco',e2); CLIPS=cached.list||[]; }
+  }
 }
 loadClips();
 document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadClips(); });
@@ -654,7 +660,7 @@ function playClip(){
   try{
     if(!CLIP.src.endsWith(src)){ CLIP.src=src; }
     CLIP.currentTime=0; CLIP.volume=1;
-    const p=CLIP.play(); p&&p.catch(e=>{ console.warn('clip play',e); toast('Il telefono ha bloccato l\'audio: tocca lo schermo e riprova'); try{ if(AC) THEMES[0].play(T()); }catch{} });
+    lastPlayErr=''; const p=CLIP.play(); p&&p.catch(e=>{ console.warn('clip play',e); if(e&&e.name==='AbortError') return; lastPlayErr=e&&e.name||'errore'; toast('Il telefono ha bloccato l\'audio: tocca lo schermo e riprova'); try{ if(AC) THEMES[0].play(T()); }catch{} });
     clearTimeout(playClip.t); clearInterval(playClip.f);
     playClip.t=setTimeout(()=>{ // fade out over 0.6s, then stop at 12s
       playClip.f=setInterval(()=>{ CLIP.volume=Math.max(0,CLIP.volume-0.1); if(CLIP.volume<=0.01){ clearInterval(playClip.f); CLIP.pause(); CLIP.volume=1; } },60);
@@ -747,6 +753,21 @@ function overtakeSound(th, aName, bNames){
     setTimeout(()=>speak(th.voice(aName,bNames)), 900);
   }
 }
+let lastPlayErr='';
+function diagnose(){
+  const t0=CLIP.currentTime;
+  setTimeout(()=>{
+    const playing=!CLIP.paused && CLIP.currentTime>t0;
+    let msg;
+    if(!CLIPS.length) msg='Nessuna clip trovata. Suona la musica di riserva.';
+    else if(playing) msg=`La clip sta suonando (${CLIPS.length} clip). Se non senti nulla alza il volume MULTIMEDIA con i tasti laterali mentre sei sulla pagina.`;
+    else if(CLIP.error) msg=`Il telefono non riesce a leggere questa clip (errore ${CLIP.error.code}).`;
+    else if(lastPlayErr) msg=`Il browser ha bloccato l'audio (${lastPlayErr}). Tocca di nuovo il pulsante.`;
+    else msg=`La clip si sta ancora caricando. Riprova tra qualche secondo.`;
+    const card=document.querySelector('.fx-card'); if(card){ const p=document.createElement('p'); p.className='fx-diag'; p.textContent=msg; card.insertBefore(p, card.querySelector('button')); }
+    else toast(msg);
+  },1800);
+}
 function predictOvertake(){
   const now=counts(); if(!me || !(me in now)) return null;
   const mine=now[me]+1; if(mine<FX_MIN) return null;
@@ -795,7 +816,7 @@ document.addEventListener('click', async e=>{
     overtakeSound(THEMES[seed], S.players[me]?.name||'Tu', S.players[other]?.name||'qualcuno');
     render();
     fxQueue.unshift({a:me,bs:[other],n:counts()[me]||0,seed}); fxBusy=false; runFx();
-    toast(CLIPS.length?`Suono di prova (${CLIPS.length} clip disponibili)`:'Nessuna clip trovata: uso la musica di riserva'); return; }
+    diagnose(); return; }
   if(act==='menu'){ UI.menu=!UI.menu; render(); }
   if(act==='nophoto'){ view.draft.photo=null; refreshEditor(); }
   if(act==='save'){
