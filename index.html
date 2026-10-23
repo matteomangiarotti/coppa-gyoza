@@ -607,24 +607,26 @@ document.addEventListener('pointerdown', unlockAudio, {passive:true});
 const REPO = (()=>{ const own=location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'matteomangiarotti';
   const name=location.pathname.split('/').filter(Boolean)[0]||'coppa-gyoza'; return {own,name}; })();
 const CLIP_EXT=/\.(mp4|m4v|mov|webm|mp3|m4a|aac|wav|ogg|oga)$/i;
-let CLIPS = ls.get('gyoza.clips',{at:0,list:[]}).list;
+let CLIPS = ls.get('gyoza.clips2',{at:0,list:[]}).list;
 const CLIP = new Audio(); CLIP.preload='none';
 const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 let clipUnlocked=false, clipReady=null;
 function unlockClip(){ if(clipUnlocked) return; clipUnlocked=true; try{ CLIP.src=SILENT; const p=CLIP.play(); p&&p.catch(()=>{}); }catch{} }
 document.addEventListener('pointerdown', unlockClip, {passive:true});
 async function loadClips(force){
-  const cached=ls.get('gyoza.clips',{at:0,list:[]});
-  if(!force && Date.now()-cached.at < 15*60*1000){ CLIPS=cached.list; return; }
+  const cached=ls.get('gyoza.clips2',{at:0,list:[]});
+  // reuse a recent non-empty list; an empty list is always re-checked
+  if(!force && cached.list.length && Date.now()-cached.at < 5*60*1000){ CLIPS=cached.list; return; }
   try{
     const r=await fetch(`https://api.github.com/repos/${REPO.own}/${REPO.name}/contents/suoni?ref=main`,{headers:{Accept:'application/vnd.github+json'}});
     if(!r.ok) throw new Error('HTTP '+r.status);
     const items=await r.json();
     CLIPS=items.filter(x=>x.type==='file' && CLIP_EXT.test(x.name)).map(x=>'suoni/'+encodeURIComponent(x.name));
-    ls.set('gyoza.clips',{at:Date.now(),list:CLIPS});
+    ls.set('gyoza.clips2',{at:Date.now(),list:CLIPS});
   }catch(e){ console.warn('clip list',e); CLIPS=cached.list||[]; }
 }
 loadClips();
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) loadClips(); });
 // shuffle bag: every clip once in random order, then a new random order (never the same clip twice in a row)
 function nextClip(){
   if(!CLIPS.length) return null;
