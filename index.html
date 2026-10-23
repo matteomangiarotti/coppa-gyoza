@@ -363,6 +363,9 @@ function connect(){
   ROOM.child('bites').on('value', s=>{ S.bites=s.val()||{}; checkOvertakes(); prepareClip(); if(S.mode==='db') render(); }, fail);
   ROOM.child('game').on('value', s=>{ S.game=s.val()||{ended:false}; if(S.mode==='db') render(); }, fail);
   FB.ref('.info/connected').on('value', s=>{ S.online=!!s.val(); status(); });
+  // remote "update now": when app/reload changes, every open phone reloads with the latest version and sound list
+  let reloadBase;
+  FB.ref('app/reload').on('value', s=>{ const v=s.val(); if(reloadBase===undefined){ reloadBase=v; return; } if(v!==reloadBase){ ls.set('gyoza.clips2',{at:0,list:[]}); location.reload(); } });
 }
 async function write(fn){
   try{ await fn(); return true; }
