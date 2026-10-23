@@ -360,7 +360,7 @@ function connect(){
   S.mode='loading'; render();
   let first=true;
   ROOM.child('players').on('value', s=>{ S.players=s.val()||{}; if(first){ first=false; S.mode='db'; if(me && S.players[me]) view={name:'play'}; } render(); }, fail);
-  ROOM.child('bites').on('value', s=>{ S.bites=s.val()||{}; checkOvertakes(); if(S.mode==='db') render(); }, fail);
+  ROOM.child('bites').on('value', s=>{ S.bites=s.val()||{}; checkOvertakes(); prepareClip(); if(S.mode==='db') render(); }, fail);
   ROOM.child('game').on('value', s=>{ S.game=s.val()||{ended:false}; if(S.mode==='db') render(); }, fail);
   FB.ref('.info/connected').on('value', s=>{ S.online=!!s.val(); status(); });
 }
@@ -603,6 +603,56 @@ function unlockAudio(){
 }
 document.addEventListener('pointerdown', unlockAudio, {passive:true});
 
+/* ---------- clip audio dalla cartella suoni/ del repository ---------- */
+const REPO = (()=>{ const own=location.hostname.endsWith('.github.io')?location.hostname.split('.')[0]:'matteomangiarotti';
+  const name=location.pathname.split('/').filter(Boolean)[0]||'coppa-gyoza'; return {own,name}; })();
+const CLIP_EXT=/\.(mp4|m4v|mov|webm|mp3|m4a|aac|wav|ogg|oga)$/i;
+let CLIPS = ls.get('gyoza.clips',{at:0,list:[]}).list;
+const CLIP = new Audio(); CLIP.preload='none';
+const SILENT='data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
+let clipUnlocked=false, clipReady=null;
+function unlockClip(){ if(clipUnlocked) return; clipUnlocked=true; try{ CLIP.src=SILENT; const p=CLIP.play(); p&&p.catch(()=>{}); }catch{} }
+document.addEventListener('pointerdown', unlockClip, {passive:true});
+async function loadClips(force){
+  const cached=ls.get('gyoza.clips',{at:0,list:[]});
+  if(!force && Date.now()-cached.at < 15*60*1000){ CLIPS=cached.list; return; }
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO.own}/${REPO.name}/contents/suoni?ref=main`,{headers:{Accept:'application/vnd.github+json'}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const items=await r.json();
+    CLIPS=items.filter(x=>x.type==='file' && CLIP_EXT.test(x.name)).map(x=>'suoni/'+encodeURIComponent(x.name));
+    ls.set('gyoza.clips',{at:Date.now(),list:CLIPS});
+  }catch(e){ console.warn('clip list',e); CLIPS=cached.list||[]; }
+}
+loadClips();
+// shuffle bag: every clip once in random order, then a new random order (never the same clip twice in a row)
+function nextClip(){
+  if(!CLIPS.length) return null;
+  let bag=ls.get('gyoza.bag',[]).filter(c=>CLIPS.includes(c));
+  if(!bag.length){
+    bag=[...CLIPS]; for(let i=bag.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [bag[i],bag[j]]=[bag[j],bag[i]]; }
+    const last=ls.get('gyoza.lastclip',null); if(bag.length>1 && bag[0]===last){ [bag[0],bag[1]]=[bag[1],bag[0]]; }
+  }
+  const c=bag.shift(); ls.set('gyoza.bag',bag); ls.set('gyoza.lastclip',c); return c;
+}
+// load the next clip ahead of time once I'm close to the threshold, so it starts instantly
+function prepareClip(){
+  if(clipReady || !CLIPS.length || !me) return;
+  if((counts()[me]||0) < FX_MIN-3) return;
+  clipReady=nextClip(); if(!clipReady) return;
+  CLIP.preload='auto'; CLIP.src=clipReady; try{ CLIP.load(); }catch{}
+}
+function playClip(){
+  if(!CLIPS.length) return false;
+  const src=clipReady||nextClip(); clipReady=null; if(!src) return false;
+  try{
+    if(!CLIP.src.endsWith(src)){ CLIP.src=src; }
+    CLIP.currentTime=0; CLIP.volume=1;
+    const p=CLIP.play(); p&&p.catch(e=>console.warn('clip play',e));
+    return true;
+  }catch(e){ console.warn(e); return false; }
+}
+
 /* synth building blocks */
 const T=()=>AC.currentTime+0.05;
 function env(node,t,a,peak,d){ const g=AC.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+d); node.connect(g); g.connect(MASTER); return g; }
@@ -676,8 +726,10 @@ function runFx(){
   if(ev.a===me){
     try{ navigator.vibrate?.([80,40,80,40,240]); }catch{}
     unlockAudio();
-    try{ if(AC){ th.play(T()); } }catch(e){ console.warn(e); }
-    setTimeout(()=>speak(th.voice(A.name,bNames)), 900);
+    if(!playClip()){
+      try{ if(AC){ th.play(T()); } }catch(e){ console.warn(e); }
+      setTimeout(()=>speak(th.voice(A.name,bNames)), 900);
+    }
   }
   clearTimeout(runFx.t); runFx.t=setTimeout(closeFx, ev.a===me?8000:5000);
 }
