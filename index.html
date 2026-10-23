@@ -289,8 +289,8 @@ svg.running .leg.r{animation:stride .32s ease-in-out infinite alternate-reverse}
 .setup{max-width:640px}
 #dburl{background:var(--lacquer);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:1rem;width:100%}
 #dburl:focus{border-color:var(--crust);outline:none}
-.bokeh{position:fixed;inset:-80px;z-index:-1;pointer-events:none;filter:blur(60px) saturate(1.3);opacity:.38}
-.bokeh svg{width:100%;height:100%}
+.bokeh{position:fixed;inset:-40px;z-index:-1;pointer-events:none;background:url('sfondo.jpg') center/cover no-repeat;filter:blur(12px) saturate(1.1);opacity:.32}
+.bokeh::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,transparent 0,rgba(17,15,28,.55) 75%)}
 .board,.me-card,.tile,.stage,.invite,.empty,.award,.finale-list,.seat,.fx-card{backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 </style>
 </head>
@@ -960,20 +960,6 @@ async function eat(e){
   addBite(me);
 }
 
-(function bokeh(){
-  // blurred paper parasols: you sense the mood, you don't see the umbrellas
-  const cols=['#e5503f','#f2a93b','#f07ab8','#3fb6a8','#8f72e0','#f4d45c','#3f7be5','#ff8a5c'];
-  let seed=7; const rnd=()=>{ seed=(seed*9301+49297)%233280; return seed/233280; };
-  let g='';
-  for(let i=0;i<14;i++){
-    const x=rnd()*100, y=rnd()*100, r=60+rnd()*110, c=cols[i%cols.length], c2=cols[(i+3)%cols.length], ribs=10+Math.floor(rnd()*6);
-    let wedges='';
-    for(let k=0;k<ribs;k++){ const a0=k/ribs*Math.PI*2, a1=(k+1)/ribs*Math.PI*2;
-      wedges+=`<path d="M0 0 L${(Math.cos(a0)*r).toFixed(1)} ${(Math.sin(a0)*r).toFixed(1)} A${r} ${r} 0 0 1 ${(Math.cos(a1)*r).toFixed(1)} ${(Math.sin(a1)*r).toFixed(1)} Z" fill="${k%2?c:c2}"/>`; }
-    g+=`<g transform="translate(${x*10} ${y*10}) rotate(${(rnd()*360).toFixed(0)}) scale(1 ${(.45+rnd()*.55).toFixed(2)})">${wedges}<circle r="${(r*.12).toFixed(0)}" fill="#fff" opacity=".6"/></g>`;
-  }
-  document.getElementById('bokeh').innerHTML=`<svg viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice">${g}</svg>`;
-})();
 render();
 connect();
 window.addEventListener('hashchange',()=>{ const h=parseHash(); if(h && (!CONN || h.r!==CONN.r || h.db!==CONN.db)) location.reload(); });
